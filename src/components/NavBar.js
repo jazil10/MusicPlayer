@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/NavBar.js
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Box,
@@ -30,8 +31,9 @@ import {
 import { styled, alpha } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 
+// Styled Components for Search Bar
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: theme.shape.borderRadius,
@@ -74,7 +76,16 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 const NavBar = ({ toggleColorMode }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isAuthenticated = auth.currentUser !== null;
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -269,14 +280,14 @@ const NavBar = ({ toggleColorMode }) => {
             </Box>
           )}
 
-          <IconButton
+          {/* <IconButton
             sx={{ ml: 1 }}
             onClick={toggleColorMode}
             color="inherit"
             aria-label="toggle theme"
           >
             {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
+          </IconButton> */}
         </Toolbar>
       </AppBar>
 
@@ -347,10 +358,10 @@ const NavBar = ({ toggleColorMode }) => {
           )}
         </List>
       </Drawer>
+
       <Toolbar />
     </Box>
   );
-
 };
 
 export default NavBar;

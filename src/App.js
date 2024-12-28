@@ -18,15 +18,12 @@ import { PlaybackProvider } from './contexts/PlaybackContext';
 
 
 function App() {
-  // State for theme mode (light/dark)
-  const [mode, setMode] = useState('light');
+  const [mode, setMode] = useState('dark');
 
-  // Toggle function for theme mode
   const toggleColorMode = () => {
     setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
   };
 
-  // Memoize the theme to optimize performance
   const theme = useMemo(() => getTheme(mode), [mode]);
 
   return (
@@ -34,13 +31,9 @@ function App() {
       <CssBaseline />
       <PlaybackProvider>
         <Router>
-          {/* Animated Gradient Background */}
           <AnimatedGradient />
-          {/* SVG Wave Overlay */}
           <WaveOverlay />
-          {/* NavBar */}
           <NavBar toggleColorMode={toggleColorMode} />
-          {/* Main Content */}
           <ContainerWithScroll>
             <Routes>
               <Route path="/" element={<MusicLibrary />} />
