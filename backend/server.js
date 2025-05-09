@@ -43,7 +43,10 @@ app.get('/api/search', async (req, res) => {
     res.json(formattedResults);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: 'Failed to search videos' });
+    res.status(500).json({ 
+      error: 'Failed to search videos',
+      message: error.message 
+    });
   }
 });
 
@@ -51,13 +54,20 @@ app.get('/api/search', async (req, res) => {
 app.get('/api/audio/:videoId', async (req, res) => {
   try {
     const { videoId } = req.params;
-    const range = req.headers.range;
-    console.log(`Audio request received for videoId: ${videoId}, range: ${range}`);
+    
+    if (!videoId) {
+      return res.status(400).json({ error: 'Video ID is required' });
+    }
 
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    // Get video info
-    const info = await ytdl.getInfo(videoUrl);
+    // Get video info with timeout
+    const info = await Promise.race([
+      ytdl.getInfo(videoUrl),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout getting video info')), 10000)
+      )
+    ]);
     
     // Get the best audio format
     const format = ytdl.chooseFormat(info.formats, { 
@@ -65,12 +75,21 @@ app.get('/api/audio/:videoId', async (req, res) => {
       filter: 'audioonly'
     });
 
+    if (!format) {
+      return res.status(404).json({ error: 'No suitable audio format found' });
+    }
+
     // Set appropriate headers for streaming
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Accept-Ranges', 'bytes');
     
-    // Create the download stream
-    const downloadStream = ytdl(videoUrl, { format });
+    // Create the download stream with timeout
+    const downloadStream = ytdl(videoUrl, { 
+      format,
+      requestOptions: {
+        timeout: 10000
+      }
+    });
     
     // Handle errors
     downloadStream.on('error', (error) => {
@@ -78,19 +97,32 @@ app.get('/api/audio/:videoId', async (req, res) => {
       if (!res.headersSent) {
         res.status(500).json({ 
           error: 'Failed to stream audio',
-          message: 'An error occurred while streaming the audio.'
+          message: error.message
         });
       }
     });
 
+    // Handle successful streaming
+    downloadStream.on('end', () => {
+      console.log('Stream completed successfully');
+    });
+
     // Pipe the stream directly to the response
     downloadStream.pipe(res);
+
+    // Handle client disconnect
+    req.on('close', () => {
+      downloadStream.destroy();
+    });
+
   } catch (error) {
     console.error('Error streaming audio:', error);
-    res.status(500).json({ 
-      error: 'Failed to stream audio',
-      message: 'An error occurred while streaming the audio file.'
-    });
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Failed to stream audio',
+        message: error.message
+      });
+    }
   }
 });
 

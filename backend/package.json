@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "vercel-build": "echo 'Build step completed'"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,10 @@
     "youtube-dl-exec": "^3.0.21",
     "yt-search": "^2.10.4",
     "ytdl-core": "npm:@distube/ytdl-core@^4.16.10",
-    "@vercel/node": "^3.0.0"
+    "@vercel/node": "^3.0.0",
+    "dotenv": "^16.0.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

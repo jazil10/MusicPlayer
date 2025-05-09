@@ -8,8 +8,22 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/health",
+      "dest": "server.js"
+    },
+    {
+      "src": "/api/search",
+      "dest": "server.js"
+    },
+    {
+      "src": "/api/audio/(.*)",
       "dest": "server.js"
     }
-  ]
+  ],
+  "functions": {
+    "server.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 } 
