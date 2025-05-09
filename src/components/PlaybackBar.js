@@ -1,13 +1,16 @@
 // src/components/PlaybackBar.js
-import React, { useContext, useState, useEffect } from 'react';
-import { Box, IconButton, Slider, Typography, Paper } from '@mui/material';
+import React, { useContext } from 'react';
+import { Box, IconButton, Slider, Typography, Paper, Avatar } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
+import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
+import ShuffleIcon from '@mui/icons-material/Shuffle';
+import RepeatIcon from '@mui/icons-material/Repeat';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { PlaybackContext } from '../contexts/PlaybackContext';
-
-const emojis = ['😃', '😂', '😍', '🥳', '🤩', '😎', '🤪', '🙃', '🤠', '😇', '🦄', '🐱‍👤', '🍕', '🌟', '🚀'];
 
 const PlaybackBar = () => {
   const {
@@ -21,32 +24,15 @@ const PlaybackBar = () => {
     seekSong,
     toggleMute,
     adjustVolume,
+    nextSong,
+    prevSong,
   } = useContext(PlaybackContext);
 
-  const [randomEmoji, setRandomEmoji] = useState('😃');
-
-  useEffect(() => {
-    if (currentSong && !currentSong.coverArt) {
-      const randomIndex = Math.floor(Math.random() * emojis.length);
-      setRandomEmoji(emojis[randomIndex]);
-    } else if (!currentSong) {
-      setRandomEmoji('😃');
-    }
-  }, [currentSong]);
-
   const formatTime = (time) => {
-    if (isNaN(time)) return '00:00';
+    if (isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    return `${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-  };
-
-  const handleSeekChange = (event, newValue) => {
-    seekSong(newValue);
-  };
-
-  const handleVolumeChange = (event, newValue) => {
-    adjustVolume(newValue);
+    return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
   };
 
   return (
@@ -54,139 +40,103 @@ const PlaybackBar = () => {
       elevation={3}
       sx={{
         position: 'fixed',
-        bottom: 20,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: { xs: '90%', sm: '80%', md: '60%' },
-        background: 'rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(15px)',
-        borderRadius: '15px',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+        left: 0,
+        bottom: 0,
+        width: '100vw',
+        minHeight: 80,
+        bgcolor: '#181818',
+        color: '#fff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: { xs: 2, sm: 3 },
-        color: '#fff',
-        zIndex: 1000, 
+        px: 3,
+        zIndex: 1300,
+        boxShadow: '0 -2px 16px 0 rgba(0,0,0,0.7)',
       }}
     >
       {/* Song Info */}
-      {currentSong && currentSong.coverArt ? (
-        <Box
-          component="img"
-          src={currentSong.coverArt}
-          alt={`${currentSong.title} cover art`}
-          sx={{
-            width: 80,
-            height: 80,
-            borderRadius: '10px',
-            objectFit: 'cover',
-            marginRight: { xs: 2, sm: 3 },
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-          }}
-        />
-      ) : currentSong ? (
-        <Box
-          sx={{
-            width: 80,
-            height: 80,
-            borderRadius: '10px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: { xs: 2, sm: 3 },
-            fontSize: '2.5rem',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-          }}
-        >
-          {randomEmoji}
-        </Box>
-      ) : (
-        <Box
-          sx={{
-            width: 80,
-            height: 80,
-            borderRadius: '10px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: { xs: 2, sm: 3 },
-            fontSize: '1.5rem',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-          }}
-        >
-          <Typography variant="h6" color="rgba(255, 255, 255, 0.7)" textAlign="center">
-            Select a song to vibe
-          </Typography>
-        </Box>
-      )}
-
-      <Box sx={{ flexGrow: 1, mr: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
         {currentSong ? (
-          <>
-            <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-              {currentSong.title}
-            </Typography>
-            <Typography variant="subtitle1" color="rgba(255, 255, 255, 0.8)">
-              {currentSong.artist}
-            </Typography>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-              <Typography variant="caption">{formatTime(currentTime)}</Typography>
-              <Slider
-                value={currentTime}
-                max={duration}
-                onChange={handleSeekChange}
-                sx={{
-                  color: '#1DB954',
-                  mx: 1,
-                  flexGrow: 1,
-                }}
-              />
-              <Typography variant="caption">{formatTime(duration)}</Typography>
-            </Box>
-          </>
+          currentSong.thumbnail ? (
+            <Avatar src={currentSong.thumbnail} alt={currentSong.title} sx={{ width: 56, height: 56, mr: 2 }} />
+          ) : (
+            <Avatar sx={{ width: 56, height: 56, mr: 2, bgcolor: '#232323', color: '#1DB954', fontWeight: 700, fontSize: 28 }}>
+              {currentSong.title && currentSong.title.length > 0 ? currentSong.title[0].toUpperCase() : <MusicNoteIcon fontSize="large" />}
+            </Avatar>
+          )
         ) : (
-          <Typography variant="h6" color="rgba(255, 255, 255, 0.7)" textAlign="center">
-            Select a song to vibe
-          </Typography>
+          <Avatar sx={{ width: 56, height: 56, mr: 2, bgcolor: '#232323', color: '#b3b3b3' }}>
+            <MusicNoteIcon fontSize="large" />
+          </Avatar>
         )}
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="subtitle1" noWrap sx={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
+            {currentSong ? currentSong.title : 'No song selected'}
+          </Typography>
+          <Typography variant="body2" noWrap sx={{ color: '#b3b3b3', fontSize: 13 }}>
+            {currentSong ? currentSong.artist : ''}
+          </Typography>
+        </Box>
       </Box>
 
       {/* Playback Controls */}
-      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        {currentSong ? (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton 
+            sx={{ color: '#b3b3b3', '&:hover': { color: '#fff' } }} 
+            onClick={prevSong}
+            disabled={!currentSong}
+          >
+            <SkipPreviousIcon />
+          </IconButton>
           <IconButton
             onClick={() => playPauseSong()}
-            sx={{ color: '#1DB954' }}
-            aria-label={isPlaying ? 'Pause Song' : 'Play Song'}
+            sx={{ 
+              color: '#fff', 
+              bgcolor: '#1DB954', 
+              mx: 1, 
+              '&:hover': { bgcolor: '#1ed760' }, 
+              width: 48, 
+              height: 48 
+            }}
+            disabled={!currentSong}
           >
             {isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
           </IconButton>
-        ) : null}
-        {currentSong ? (
-          <>
-            <IconButton
-              onClick={toggleMute}
-              sx={{ color: '#1DB954', ml: 2 }}
-              aria-label={isMuted ? 'Unmute Volume' : 'Mute Volume'}
-            >
-              {isMuted ? <VolumeOffIcon fontSize="large" /> : <VolumeUpIcon fontSize="large" />}
-            </IconButton>
-            <Slider
-              value={volume}
-              onChange={handleVolumeChange}
-              aria-labelledby="volume-slider"
-              sx={{
-                color: '#1DB954',
-                ml: 1,
-                width: 100, 
-              }}
-            />
-          </>
-        ) : null}
+          <IconButton 
+            sx={{ color: '#b3b3b3', '&:hover': { color: '#fff' } }} 
+            onClick={nextSong}
+            disabled={!currentSong}
+          >
+            <SkipNextIcon />
+          </IconButton>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: '#b3b3b3', minWidth: 40 }}>{formatTime(currentTime)}</Typography>
+          <Slider
+            value={currentTime}
+            min={0}
+            max={duration || 1}
+            onChange={(_, v) => seekSong(v)}
+            sx={{ color: '#1DB954', mx: 1, flex: 1 }}
+            disabled={!currentSong}
+          />
+          <Typography variant="caption" sx={{ color: '#b3b3b3', minWidth: 40 }}>{formatTime(duration)}</Typography>
+        </Box>
+      </Box>
+
+      {/* Volume Controls */}
+      <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+        <IconButton onClick={toggleMute} sx={{ color: '#b3b3b3', mr: 1 }}>
+          {isMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
+        </IconButton>
+        <Slider
+          value={volume}
+          onChange={(_, v) => adjustVolume(v)}
+          min={0}
+          max={100}
+          sx={{ color: '#1DB954', width: 100 }}
+        />
       </Box>
     </Paper>
   );

@@ -131,7 +131,7 @@ const NavBar = ({ toggleColorMode }) => {
         position="fixed"
         elevation={0}
         sx={{
-          background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+          background: 'linear-gradient(45deg, #000, #1a1a1a)',
           color: '#fff',
           backdropFilter: 'blur(10px)',
           borderBottom: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
@@ -161,7 +161,7 @@ const NavBar = ({ toggleColorMode }) => {
             component={RouterLink}
             to="/"
           >
-            <MusicNoteIcon sx={{ mr: 1, fontSize: '2rem' }} />
+            <MusicNoteIcon sx={{ mr: 1, fontSize: '2rem', color: '#1DB954' }} />
             <Typography variant="h6" noWrap component="div">
               GanayShanay
             </Typography>
@@ -197,8 +197,8 @@ const NavBar = ({ toggleColorMode }) => {
                       height: '2px',
                       bottom: -2,
                       left: 0,
-                      backgroundColor: '#fff',
-                      transition: 'width 0.3s',
+                      backgroundColor: '#1DB954',
+                      transition: 'width 0.3s ease-in-out',
                     },
                     '&:hover::after': {
                       width: '100%',

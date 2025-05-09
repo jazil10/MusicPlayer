@@ -2,16 +2,12 @@
 import React, { useEffect, useState, useContext } from 'react';
 import {
   Container,
-  List,
-  ListItem,
-  ListItemAvatar,
-  Avatar,
-  ListItemText,
   TextField,
   Box,
   Typography,
-  Divider,
+  Grid,
   Paper,
+  Avatar,
 } from '@mui/material';
 import { db } from '../firebase';
 import {
@@ -23,22 +19,14 @@ import {
 } from 'firebase/firestore';
 import { PlaybackContext } from '../contexts/PlaybackContext';
 import PlaybackBar from './PlaybackBar';
-
-const emojis = ['😃', '😂', '😍', '🥳', '🤩', '😎', '🤪', '🙃', '🤠', '😇', '🦄', '🐱‍👤', '🍕', '🌟', '🚀'];
-
-const formatTime = (time) => {
-  if (isNaN(time)) return '00:00';
-  const minutes = Math.floor(time / 60);
-  const seconds = Math.floor(time % 60);
-  return `${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-};
+import PlayCircleFilledWhiteIcon from '@mui/icons-material/PlayCircleFilledWhite';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
 
 const MusicLibrary = () => {
   const [musicList, setMusicList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { playPauseSong } = useContext(PlaybackContext);
-
-  const [songDurations, setSongDurations] = useState({});
+  const [currentlyPlayingId, setCurrentlyPlayingId] = useState(null);
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
 
@@ -135,153 +123,130 @@ const MusicLibrary = () => {
     };
   }, [debouncedSearchTerm]);
 
-  useEffect(() => {
-    musicList.forEach((music) => {
-      if (!songDurations[music.id] && music.url) {
-        const audio = new Audio();
-        audio.src = music.url;
-        audio.addEventListener('loadedmetadata', () => {
-          setSongDurations((prev) => ({
-            ...prev,
-            [music.id]: audio.duration,
-          }));
-        });
-        audio.addEventListener('error', (e) => {
-          console.error(`Error loading audio for ${music.title}:`, e);
-          setSongDurations((prev) => ({
-            ...prev,
-            [music.id]: 0, 
-          }));
-        });
-      }
-    });
-  }, [musicList, songDurations]);
+  const handlePlay = (music) => {
+    console.log('Raw music data:', music);
+    
+    // Create a song object with the required format
+    const song = {
+      id: music.id,
+      title: music.title,
+      artist: music.artist,
+      videoId: music.id, // Use the document ID as videoId
+      audioUrl: music.url, // Include the Firebase storage URL
+      duration: music.duration,
+      thumbnail: music.coverArt || music.url // Use coverArt if available, otherwise use the audio URL
+    };
+    
+    console.log('Formatted song for playback:', song);
+    playPauseSong(song);
+    setCurrentlyPlayingId(song.id);
+  };
 
   return (
-    <Container
-      maxWidth="md"
-      sx={{
-        mt: 4,
-        mb: 4,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden', 
-      }}
-    >
-
-      <PlaybackBar />
-      
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          label="Search by Title or Artist"
-          variant="outlined"
-          fullWidth
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            style: { color: '#fff' },
-          }}
-          InputLabelProps={{
-            style: { color: '#fff' },
-          }}
+    <Box sx={{ p: 0, minHeight: '100vh', bgcolor: '#181818' }}>
+      {/* Header Section */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 4, p: 4, pb: 2 }}>
+        <Box
           sx={{
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            width: 180,
+            height: 180,
+            bgcolor: '#282828',
             borderRadius: 2,
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: 'rgba(255, 255, 255, 0.3)',
-              },
-              '&:hover fieldset': {
-                borderColor: '#1DB954',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#1DB954',
-              },
-            },
-          }}
-        />
-      </Box>
-
-      {/* Music List */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-          pr: 1,
-        }}
-      >
-        <List
-          sx={{
-            width: '100%',
-            bgcolor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: 3,
           }}
         >
-          {musicList.map((music, index) => (
-            <React.Fragment key={music.id}>
-              <Paper
-                elevation={2}
-                sx={{
-                  mb: 2,
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  cursor: 'pointer',
-                  transition: 'transform 0.3s, background 0.3s',
-                  '&:hover': {
-                    transform: 'scale(1.02)',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                  },
-                }}
-                onClick={() => playPauseSong(music)}
-              >
-                <ListItem alignItems="center">
-                  <ListItemAvatar>
-                    {music.coverArt ? (
-                      <Avatar
-                        variant="rounded"
-                        src={music.coverArt}
-                        alt={`${music.title} cover art`}
-                        sx={{ width: 80, height: 80, mr: 3 }}
-                      />
-                    ) : (
-                      <Avatar
-                        variant="rounded"
-                        sx={{
-                          width: 80,
-                          height: 80,
-                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                          fontSize: 40,
-                          mr: 3,
-                        }}
-                      >
-                        {emojis[Math.floor(Math.random() * emojis.length)]}
-                      </Avatar>
-                    )}
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="h6" sx={{ color: '#fff' }}>
-                        {music.title}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="subtitle2" color="rgba(255, 255, 255, 0.8)">
-                        {music.artist}
-                      </Typography>
-                    }
-                  />
-                  <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
-                    {songDurations[music.id] ? formatTime(songDurations[music.id]) : 'Loading...'}
-                  </Typography>
-                </ListItem>
-              </Paper>
-              {index < musicList.length - 1 && <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />}
-            </React.Fragment>
-          ))}
-        </List>
+          <MusicNoteIcon sx={{ fontSize: 80, color: '#b3b3b3' }} />
+        </Box>
+        <Box>
+          <Typography variant="overline" sx={{ color: '#fff', opacity: 0.7 }}>
+            PLAYLIST
+          </Typography>
+          <Typography variant="h2" sx={{ fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+            Liked Songs
+          </Typography>
+          <Typography variant="subtitle1" sx={{ color: '#b3b3b3', mt: 1 }}>
+            Your Profile • {musicList.length} songs
+          </Typography>
+        </Box>
       </Box>
-    </Container>
+
+      {/* Play Button */}
+      <Box sx={{ pl: 4, pt: 2 }}>
+        <PlayCircleFilledWhiteIcon sx={{ fontSize: 64, color: '#1DB954', cursor: 'pointer', transition: 'transform 0.1s', '&:hover': { transform: 'scale(1.08)' } }} />
+      </Box>
+
+      {/* Song Table */}
+      <Box sx={{ p: 4, pt: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', color: '#b3b3b3', fontWeight: 700, fontSize: 14, pb: 1, borderBottom: '1px solid #232323' }}>
+          <Box sx={{ width: 32, mr: 2 }}>#</Box>
+          <Box sx={{ flex: 2 }}>TITLE</Box>
+          <Box sx={{ flex: 1 }}>ARTIST</Box>
+          <Box sx={{ flex: 1 }}>DATE ADDED</Box>
+          <Box sx={{ width: 48, textAlign: 'right' }}>
+            <span role="img" aria-label="duration">⏱️</span>
+          </Box>
+        </Box>
+        {musicList.map((music, idx) => (
+          <Box
+            key={music.id}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              py: 1.5,
+              px: 1,
+              borderRadius: 1,
+              mt: 1,
+              bgcolor: currentlyPlayingId === music.id ? 'rgba(29,185,84,0.2)' : 'transparent',
+              color: currentlyPlayingId === music.id ? '#1DB954' : '#fff',
+              fontWeight: currentlyPlayingId === music.id ? 700 : 400,
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.05)',
+              },
+            }}
+            onClick={() => handlePlay(music)}
+          >
+            <Box sx={{ width: 32, mr: 2 }}>{idx + 1}</Box>
+            <Box sx={{ flex: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+              {music.coverArt ? (
+                <Box
+                  component="img"
+                  src={music.coverArt}
+                  alt={music.title}
+                  sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover', mr: 2, boxShadow: 1 }}
+                />
+              ) : (
+                <Avatar
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    bgcolor: '#232323',
+                    color: '#1DB954',
+                    fontWeight: 700,
+                    fontSize: 22,
+                    mr: 2,
+                  }}
+                >
+                  {music.title && music.title.length > 0 ? music.title[0].toUpperCase() : <MusicNoteIcon fontSize="small" />}
+                </Avatar>
+              )}
+              <Box>
+                <Typography variant="subtitle1" sx={{ color: 'inherit', fontWeight: 700, fontSize: 16 }}>
+                  {music.title}
+                </Typography>
+              </Box>
+            </Box>
+            <Box sx={{ flex: 1 }}>{music.artist || '-'}</Box>
+            <Box sx={{ flex: 1 }}>{music.createdAt ? new Date(music.createdAt.seconds * 1000).toLocaleDateString() : '-'}</Box>
+            <Box sx={{ width: 48, textAlign: 'right' }}>{music.duration ? `${Math.floor(music.duration / 60)}:${String(Math.floor(music.duration % 60)).padStart(2, '0')}` : '--:--'}</Box>
+          </Box>
+        ))}
+      </Box>
+    </Box>
   );
 };
 

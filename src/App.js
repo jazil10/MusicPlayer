@@ -12,7 +12,9 @@ import SignUp from './components/SignUp';
 import Login from './components/Login';
 import UploadMusic from './components/UploadMusic';
 import MusicLibrary from './components/MusicLibrary';
-import PlaybackBar from './components/PlaybackBar'; 
+import PlaybackBar from './components/PlaybackBar';
+import Sidebar from './components/Sidebar';
+import Search from './components/Search';
 
 import { PlaybackProvider } from './contexts/PlaybackContext';
 
@@ -31,18 +33,23 @@ function App() {
       <CssBaseline />
       <PlaybackProvider>
         <Router>
-          <AnimatedGradient />
-          <WaveOverlay />
-          <NavBar toggleColorMode={toggleColorMode} />
-          <ContainerWithScroll>
-            <Routes>
-              <Route path="/" element={<MusicLibrary />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/upload" element={<UploadMusic />} />
-            </Routes>
-          </ContainerWithScroll>
-          <PlaybackBar />
+          <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#181818' }}>
+            <Sidebar />
+            <Box sx={{ flexGrow: 1, ml: '240px', minHeight: '100vh', position: 'relative' }}>
+              <AnimatedGradient />
+              <WaveOverlay />
+              <ContainerWithScroll>
+                <Routes>
+                  <Route path="/" element={<MusicLibrary />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/upload" element={<UploadMusic />} />
+                  <Route path="/search" element={<Search />} />
+                </Routes>
+              </ContainerWithScroll>
+              <PlaybackBar />
+            </Box>
+          </Box>
         </Router>
       </PlaybackProvider>
     </ThemeProvider>
