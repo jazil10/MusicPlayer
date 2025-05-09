@@ -5,9 +5,14 @@ const ytdl = require('ytdl-core');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 5000;
 
-app.use(cors());
+// Enable CORS for all routes
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Range']
+}));
+
 app.use(express.json());
 
 // Health check endpoint
@@ -89,9 +94,16 @@ app.get('/api/audio/:videoId', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const port = process.env.PORT || 5000;
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
+
+// Export the Express API
+module.exports = app;
 
 // function checking(){
 //     ytdl('https://www.youtube.com/watch?v=erWlHBJLA20')
