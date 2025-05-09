@@ -6,12 +6,17 @@ require('dotenv').config();
 
 const app = express();
 
-// Enable CORS for all routes
+// Enable CORS for all routes with specific configuration
 app.use(cors({
-  origin: '*',
+  origin: ['http://localhost:3000', 'https://ganayshanay.vercel.app/'],
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Range']
+  allowedHeaders: ['Content-Type', 'Range', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
 }));
+
+// Add preflight handler
+app.options('*', cors());
 
 app.use(express.json());
 
@@ -23,12 +28,16 @@ app.get('/health', (req, res) => {
 app.get('/api/search', async (req, res) => {
   try {
     const { query } = req.query;
+    console.log('Search request received for query:', query);
     
     if (!query) {
+      console.log('No query provided');
       return res.status(400).json({ error: 'Search query is required' });
     }
 
+    console.log('Searching YouTube for:', query);
     const searchResults = await ytSearch(query);
+    console.log('Raw search results:', searchResults);
     
     // Format the results to match our frontend needs
     const formattedResults = searchResults.videos.slice(0, 3).map(video => ({
@@ -39,13 +48,15 @@ app.get('/api/search', async (req, res) => {
       videoId: video.videoId,
       duration: video.duration.timestamp
     }));
+    console.log('Formatted results:', formattedResults);
 
     res.json(formattedResults);
   } catch (error) {
     console.error('Search error:', error);
     res.status(500).json({ 
       error: 'Failed to search videos',
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

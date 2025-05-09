@@ -17,12 +17,13 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
 import { usePlayback } from '../contexts/PlaybackContext';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-g7372e8s9-jazils-projects.vercel.app/api'  || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-g7372e8s9-jazils-projects.vercel.app/api';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { addToQueue, playPauseSong, currentSong } = usePlayback();
 
   const handleSearch = async (e) => {
@@ -30,16 +31,28 @@ const Search = () => {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`${API_URL}/search?query=${encodeURIComponent(searchQuery)}`);
+      console.log('Searching with URL:', `${API_URL}/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_URL}/search?query=${encodeURIComponent(searchQuery)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors',
+        credentials: 'include'
+      });
       if (!response.ok) {
-        throw new Error('Search failed');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Search failed');
       }
       const results = await response.json();
       console.log('Search results:', results);
       setSearchResults(results);
     } catch (error) {
       console.error('Search failed:', error);
+      setError(error.message);
       setSearchResults([]);
     } finally {
       setLoading(false);
@@ -141,7 +154,7 @@ const Search = () => {
 
       {!loading && searchResults.length === 0 && searchQuery && (
         <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-          No results found
+          {error || 'No results found'}
         </Typography>
       )}
     </Box>
