@@ -17,7 +17,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
 import { usePlayback } from '../contexts/PlaybackContext';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-g7372e8s9-jazils-projects.vercel.app/api'  || 'http://localhost:5000/api';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
