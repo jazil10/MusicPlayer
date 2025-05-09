@@ -1,6 +1,8 @@
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 class AudioCacheService {
   constructor() {
-    this.cacheName = 'music-player-cache-v1';
+    this.cacheName = 'audio-cache';
     this.initializeCache();
   }
 
@@ -19,7 +21,7 @@ class AudioCacheService {
 
     try {
       const cache = await caches.open(this.cacheName);
-      const url = `http://localhost:5000/api/audio/${videoId}`;
+      const url = `${API_URL}/api/audio/${videoId}`;
       const response = new Response(audioBlob, {
         headers: {
           'Content-Type': 'audio/mpeg',
@@ -38,7 +40,7 @@ class AudioCacheService {
 
     try {
       const cache = await caches.open(this.cacheName);
-      const url = `http://localhost:5000/api/audio/${videoId}`;
+      const url = `${API_URL}/api/audio/${videoId}`;
       const response = await cache.match(url);
       return response ? await response.blob() : null;
     } catch (error) {
@@ -52,7 +54,7 @@ class AudioCacheService {
 
     try {
       const cache = await caches.open(this.cacheName);
-      const url = `http://localhost:5000/api/audio/${videoId}`;
+      const url = `${API_URL}/api/audio/${videoId}`;
       const response = await cache.match(url);
       return !!response;
     } catch (error) {

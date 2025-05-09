@@ -11,6 +11,8 @@ export const usePlayback = () => {
   return context;
 };
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 export const PlaybackProvider = ({ children }) => {
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -42,7 +44,7 @@ export const PlaybackProvider = ({ children }) => {
         const nextSong = queue[0];
         setQueue(prevQueue => prevQueue.slice(1));
         setCurrentSong(nextSong);
-        const audioUrl = nextSong.audioUrl || `http://localhost:5000/api/audio/${nextSong.videoId}`;
+        const audioUrl = nextSong.audioUrl || `${API_URL}/api/audio/${nextSong.videoId}`;
         audio.src = audioUrl;
         audio.play();
       } else {
@@ -68,7 +70,7 @@ export const PlaybackProvider = ({ children }) => {
       console.log('Starting playback for song:', song);
       
       const audio = audioRef.current;
-      const audioUrl = song.audioUrl || `http://localhost:5000/api/audio/${song.videoId}`;
+      const audioUrl = song.audioUrl || `${API_URL}/api/audio/${song.videoId}`;
       console.log('Audio URL:', audioUrl);
       
       audio.src = audioUrl;

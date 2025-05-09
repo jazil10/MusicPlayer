@@ -7,4 +7,16 @@ services:
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: music-player-frontend
+    env: node
+    rootDir: .
+    buildCommand: npm install && npm run build
+    startCommand: serve -s build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://music-player-backend.onrender.com
+      - key: NODE_ENV
         value: production 
