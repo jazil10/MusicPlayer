@@ -11,7 +11,7 @@ export const usePlayback = () => {
   return context;
 };
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-g7372e8s9-jazils-projects.vercel.app' || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-nine.vercel.app'  || 'http://localhost:5000';
 
 export const PlaybackProvider = ({ children }) => {
   const [currentSong, setCurrentSong] = useState(null);
