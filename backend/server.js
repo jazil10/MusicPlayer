@@ -5,18 +5,9 @@ const ytdl = require('ytdl-core');
 require('dotenv').config();
 
 const app = express();
+const port = process.env.PORT || 5000;
 
-// Enable CORS for all routes with specific configuration
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://ganayshanay.vercel.app'],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Range', 'Authorization'],
-  credentials: false
-}));
-
-// Add preflight handler
-app.options('*', cors());
-
+app.use(cors());
 app.use(express.json());
 
 // Health check endpoint
@@ -27,16 +18,12 @@ app.get('/health', (req, res) => {
 app.get('/api/search', async (req, res) => {
   try {
     const { query } = req.query;
-    console.log('Search request received for query:', query);
     
     if (!query) {
-      console.log('No query provided');
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    console.log('Searching YouTube for:', query);
     const searchResults = await ytSearch(query);
-    console.log('Raw search results:', searchResults);
     
     // Format the results to match our frontend needs
     const formattedResults = searchResults.videos.slice(0, 3).map(video => ({
@@ -47,16 +34,11 @@ app.get('/api/search', async (req, res) => {
       videoId: video.videoId,
       duration: video.duration.timestamp
     }));
-    console.log('Formatted results:', formattedResults);
 
     res.json(formattedResults);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ 
-      error: 'Failed to search videos',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ error: 'Failed to search videos' });
   }
 });
 
@@ -64,20 +46,13 @@ app.get('/api/search', async (req, res) => {
 app.get('/api/audio/:videoId', async (req, res) => {
   try {
     const { videoId } = req.params;
-    
-    if (!videoId) {
-      return res.status(400).json({ error: 'Video ID is required' });
-    }
+    const range = req.headers.range;
+    console.log(`Audio request received for videoId: ${videoId}, range: ${range}`);
 
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    // Get video info with timeout
-    const info = await Promise.race([
-      ytdl.getInfo(videoUrl),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout getting video info')), 10000)
-      )
-    ]);
+    // Get video info
+    const info = await ytdl.getInfo(videoUrl);
     
     // Get the best audio format
     const format = ytdl.chooseFormat(info.formats, { 
@@ -85,67 +60,60 @@ app.get('/api/audio/:videoId', async (req, res) => {
       filter: 'audioonly'
     });
 
-    if (!format) {
-      return res.status(404).json({ error: 'No suitable audio format found' });
+    const fileSize = parseInt(format.contentLength);
+    
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'audio/mpeg',
+      });
+
+      const stream = ytdl(videoUrl, { 
+        format,
+        range: { start, end }
+      });
+      
+      stream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': 'audio/mpeg',
+      });
+      
+      const stream = ytdl(videoUrl, { format });
+      stream.pipe(res);
     }
 
-    // Set appropriate headers for streaming
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Accept-Ranges', 'bytes');
-    
-    // Create the download stream with timeout
-    const downloadStream = ytdl(videoUrl, { 
-      format,
-      requestOptions: {
-        timeout: 10000
-      }
-    });
-    
     // Handle errors
-    downloadStream.on('error', (error) => {
+    res.on('error', (error) => {
       console.error('Stream error:', error);
       if (!res.headersSent) {
         res.status(500).json({ 
           error: 'Failed to stream audio',
-          message: error.message
+          message: 'An error occurred while streaming the audio.'
         });
       }
     });
 
-    // Handle successful streaming
-    downloadStream.on('end', () => {
-      console.log('Stream completed successfully');
-    });
-
-    // Pipe the stream directly to the response
-    downloadStream.pipe(res);
-
-    // Handle client disconnect
-    req.on('close', () => {
-      downloadStream.destroy();
-    });
-
   } catch (error) {
     console.error('Error streaming audio:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ 
-        error: 'Failed to stream audio',
-        message: error.message
-      });
-    }
+    res.status(500).json({ 
+      error: 'Failed to stream audio',
+      message: 'An error occurred while streaming the audio file.'
+    });
   }
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  const port = process.env.PORT || 5000;
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-}
-
-// Export the Express API
-module.exports = app;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
 
 // function checking(){
 //     ytdl('https://www.youtube.com/watch?v=erWlHBJLA20')
