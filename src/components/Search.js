@@ -17,7 +17,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
 import { usePlayback } from '../contexts/PlaybackContext';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://musicbackend-nojm61ic.b4a.run/api';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,11 +63,24 @@ const Search = () => {
     const formattedSong = {
       id: song.url,
       title: song.name,
-      artist: song.artist,
+      artist: song.author?.name || song.artist,
       videoId: song.url,
       audioUrl: `${API_URL}/audio/${encodeURIComponent(song.url)}`,
-      duration: '0:00', // Default duration since it's not available
-      thumbnail: `https://i1.sndcdn.com/artworks-${song.url.split('/').pop()}-large.jpg`
+      duration: song.duration ? Math.floor(song.duration / 1000) : 0, // Convert milliseconds to seconds
+      thumbnail: song.thumbnail,
+      genre: song.genre,
+      playCount: song.playCount,
+      likes: song.likes,
+      commentsCount: song.commentsCount,
+      publishedAt: song.publishedAt,
+      author: {
+        name: song.author?.name,
+        username: song.author?.username,
+        avatarURL: song.author?.avatarURL,
+        followers: song.author?.followers,
+        following: song.author?.following,
+        verified: song.author?.verified
+      }
     };
     
     console.log('Formatted song for playback:', formattedSong);
@@ -85,11 +98,24 @@ const Search = () => {
     const formattedSong = {
       id: song.url,
       title: song.name,
-      artist: song.artist,
+      artist: song.author?.name || song.artist,
       videoId: song.url,
       audioUrl: `${API_URL}/audio/${encodeURIComponent(song.url)}`,
-      duration: '0:00', // Default duration since it's not available
-      thumbnail: `https://i1.sndcdn.com/artworks-${song.url.split('/').pop()}-large.jpg`
+      duration: song.duration ? Math.floor(song.duration / 1000) : 0, // Convert milliseconds to seconds
+      thumbnail: song.thumbnail,
+      genre: song.genre,
+      playCount: song.playCount,
+      likes: song.likes,
+      commentsCount: song.commentsCount,
+      publishedAt: song.publishedAt,
+      author: {
+        name: song.author?.name,
+        username: song.author?.username,
+        avatarURL: song.author?.avatarURL,
+        followers: song.author?.followers,
+        following: song.author?.following,
+        verified: song.author?.verified
+      }
     };
     
     console.log('Formatted song for queue:', formattedSong);
