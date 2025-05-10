@@ -17,7 +17,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
 import { usePlayback } from '../contexts/PlaybackContext';
 
-const API_URL = 'https://music-player-backend-nine.vercel.app/api';
+const API_URL = 'https://musicbackend-nojm61ic.b4a.run/api';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');

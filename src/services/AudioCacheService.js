@@ -1,4 +1,4 @@
-const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-nine.vercel.app' || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://musicbackend-nojm61ic.b4a.run/api';
 
 class AudioCacheService {
   constructor() {
