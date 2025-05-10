@@ -13,27 +13,27 @@
   "routes": [
     {
       "src": "/health",
-      "dest": "server.js",
+      "dest": "/server.js",
       "headers": {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://ganayshanay.vercel.app",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Range, Authorization"
       }
     },
     {
       "src": "/api/search",
-      "dest": "server.js",
+      "dest": "/server.js",
       "headers": {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://ganayshanay.vercel.app",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Range, Authorization"
       }
     },
     {
       "src": "/api/audio/(.*)",
-      "dest": "server.js",
+      "dest": "/server.js",
       "headers": {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://ganayshanay.vercel.app",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Range, Authorization"
       }

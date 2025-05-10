@@ -17,7 +17,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
 import { usePlayback } from '../contexts/PlaybackContext';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://music-player-backend-nine.vercel.app/api' || 'http://localhost:5000/api';
+const API_URL = 'https://music-player-backend-nine.vercel.app/api';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,8 +40,7 @@ const Search = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        mode: 'cors',
-        credentials: 'include'
+        mode: 'cors'
       });
       if (!response.ok) {
         const errorData = await response.json();

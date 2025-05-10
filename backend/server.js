@@ -8,11 +8,10 @@ const app = express();
 
 // Enable CORS for all routes with specific configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://ganayshanay.vercel.app/'],
+  origin: ['http://localhost:3000', 'https://ganayshanay.vercel.app'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Range', 'Authorization'],
-  credentials: true,
-  maxAge: 86400 // 24 hours
+  credentials: false
 }));
 
 // Add preflight handler
