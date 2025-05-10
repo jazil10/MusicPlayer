@@ -1,11 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const ytSearch = require('yt-search');
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// Read cookies from file
+const cookies = JSON.parse(fs.readFileSync('./cookies.json', 'utf8'));
+
+// Create cookie string
+const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
 app.use(cors());
 app.use(express.json());
@@ -51,8 +58,15 @@ app.get('/api/audio/:videoId', async (req, res) => {
 
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    // Get video info
-    const info = await ytdl.getInfo(videoUrl);
+    // Get video info with cookies
+    const info = await ytdl.getInfo(videoUrl, {
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Cookie': cookieString
+        }
+      }
+    });
     
     // Get the best audio format
     const format = ytdl.chooseFormat(info.formats, { 
@@ -60,39 +74,23 @@ app.get('/api/audio/:videoId', async (req, res) => {
       filter: 'audioonly'
     });
 
-    const fileSize = parseInt(format.contentLength);
+    // Set appropriate headers for streaming
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Accept-Ranges', 'bytes');
     
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunksize = (end - start) + 1;
-      
-      res.writeHead(206, {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunksize,
-        'Content-Type': 'audio/mpeg',
-      });
-
-      const stream = ytdl(videoUrl, { 
-        format,
-        range: { start, end }
-      });
-      
-      stream.pipe(res);
-    } else {
-      res.writeHead(200, {
-        'Content-Length': fileSize,
-        'Content-Type': 'audio/mpeg',
-      });
-      
-      const stream = ytdl(videoUrl, { format });
-      stream.pipe(res);
-    }
-
+    // Create the download stream with cookies
+    const downloadStream = ytdl(videoUrl, { 
+      format,
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Cookie': cookieString
+        }
+      }
+    });
+    
     // Handle errors
-    res.on('error', (error) => {
+    downloadStream.on('error', (error) => {
       console.error('Stream error:', error);
       if (!res.headersSent) {
         res.status(500).json({ 
@@ -102,6 +100,8 @@ app.get('/api/audio/:videoId', async (req, res) => {
       }
     });
 
+    // Pipe the stream directly to the response
+    downloadStream.pipe(res);
   } catch (error) {
     console.error('Error streaming audio:', error);
     res.status(500).json({ 
