@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('soundcloud-scraper');
@@ -6,14 +8,14 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Initialize SoundCloud client
-const client = new Client('AXHkknI02RnaQ0vVJ3FK3pVcoToTlmFK');
+// Initialize SoundCloud client (or use process.env.SOUNDCLOUD_CLIENT_ID)
+const client = new Client(process.env.SOUNDCLOUD_CLIENT_ID || 'AXHkknI02RnaQ0vVJ3FK3pVcoToTlmFK');
 
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
-app.get('/health', (req, res) => {
+// Health check
+app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
@@ -21,32 +23,23 @@ app.get('/health', (req, res) => {
 app.get('/api/search', async (req, res) => {
   try {
     const { query } = req.query;
-    
     if (!query) {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    const searchResults = await client.search(query, 'track');
-    console.log('First search result:', JSON.stringify(searchResults[0], null, 2));
-    
-    // Format the results to match our frontend needs
-    const formattedResults = searchResults.slice(0, 3).map(track => {
-      console.log('Processing track:', track.name);
-      console.log('Track data:', JSON.stringify(track, null, 2));
-      
-      return {
-        id: track.url.split('/').pop(), // Extract ID from URL
-        title: track.name,
-        artist: track.artist,
-        thumbnail: `https://i1.sndcdn.com/artworks-${track.url.split('/').pop()}-large.jpg`, // Construct thumbnail URL
-        duration: '0:00', // Duration not available in basic response
-        url: track.url
-      };
-    });
+    const results = await client.search(query, 'track');
+    const formatted = results.slice(0, 3).map(track => ({
+      id: encodeURIComponent(track.url),             // full URL, URL-encoded
+      title: track.name,
+      artist: track.artist,
+      thumbnail: track.thumbnail,
+      duration: formatDuration(track.duration),
+      url: track.url
+    }));
 
-    res.json(formattedResults);
-  } catch (error) {
-    console.error('Search error:', error);
+    res.json(formatted);
+  } catch (err) {
+    console.error('Search error:', err);
     res.status(500).json({ error: 'Failed to search tracks' });
   }
 });
@@ -54,58 +47,77 @@ app.get('/api/search', async (req, res) => {
 // Audio streaming endpoint
 app.get('/api/audio/:trackId', async (req, res) => {
   try {
-    const { trackId } = req.params;
-    console.log(`Audio request received for trackId: ${trackId}`);
+    const trackUrl = decodeURIComponent(req.params.trackId);
+    console.log(`Fetching track info from: ${trackUrl}`);
 
-    // Get track info using the complete URL
-    const trackUrl = decodeURIComponent(trackId);
-    console.log('Fetching track info from URL:', trackUrl);
-    
-    try {
-      const track = await client.getSongInfo(trackUrl);
-      console.log('Track info:', JSON.stringify(track, null, 2));
-      
-      // Set appropriate headers for streaming
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Accept-Ranges', 'bytes');
+    const track = await client.getSongInfo(trackUrl);
+    console.log('Track info:', JSON.stringify(track, null, 2));
 
-      // Get the stream
-      const stream = await track.downloadProgressive();
-      
-      // Handle errors
-      stream.on('error', (error) => {
-        console.error('Stream error:', error);
-        if (!res.headersSent) {
-          res.status(500).json({ 
-            error: 'Failed to stream audio',
-            message: 'An error occurred while streaming the audio.'
-          });
-        }
-      });
+    // Prepare response headers
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Accept-Ranges', 'bytes');
 
-      // Handle stream end
-      stream.on('end', () => {
-        console.log('Stream ended successfully');
-      });
+    // The scraper may expose streams under `.streams` or `.track`
+    const streams = track.streams || track.track;
+    const progURL = streams?.progressive;
+    const hlsURL  = streams?.hls;
 
-      // Pipe the stream directly to the response
-      stream.pipe(res);
-    } catch (trackError) {
-      console.error('Error getting track info:', trackError);
-      res.status(500).json({ 
-        error: 'Failed to get track info',
-        message: 'Could not retrieve track information.'
+    let stream;
+    if (progURL && progURL.includes('/hls')) {
+      console.log('Progressive URL is HLS; falling back to HLS download');
+      stream = await track.downloadHLS();
+    } else {
+      console.log('Using progressive download');
+      stream = await track.downloadProgressive();
+    }
+
+    // Pipe with back-pressure
+    stream.on('data', chunk => {
+      if (!res.write(chunk)) {
+        stream.pause();
+      }
+    });
+    res.on('drain', () => stream.resume());
+
+    stream.on('end', () => {
+      console.log('Stream ended');
+      res.end();
+    });
+
+    stream.on('error', err => {
+      console.error('Stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Failed to stream audio',
+          message: 'An error occurred while streaming.'
+        });
+      }
+    });
+
+    req.on('close', () => {
+      console.log('Client disconnected; destroying stream');
+      stream.destroy();
+    });
+
+  } catch (err) {
+    console.error('Audio endpoint error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Failed to stream audio',
+        message: 'An unexpected error occurred.'
       });
     }
-  } catch (error) {
-    console.error('Error streaming audio:', error);
-    res.status(500).json({ 
-      error: 'Failed to stream audio',
-      message: 'An error occurred while streaming the audio file.'
-    });
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server listening on port ${port}`);
 });
+
+// Helper: convert ms → m:ss
+function formatDuration(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
