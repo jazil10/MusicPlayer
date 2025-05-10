@@ -17,7 +17,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
 import { usePlayback } from '../contexts/PlaybackContext';
 
-const API_URL = 'https://musicbackend-nojm61ic.b4a.run/api';
+const API_URL = 'http://localhost:5000/api';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,17 +59,41 @@ const Search = () => {
   };
 
   const handlePlay = (song) => {
+    // Format the song object to match what the playback context expects
+    const formattedSong = {
+      id: song.url,
+      title: song.name,
+      artist: song.artist,
+      videoId: song.url,
+      audioUrl: `${API_URL}/audio/${encodeURIComponent(song.url)}`,
+      duration: '0:00', // Default duration since it's not available
+      thumbnail: `https://i1.sndcdn.com/artworks-${song.url.split('/').pop()}-large.jpg`
+    };
+    
+    console.log('Formatted song for playback:', formattedSong);
+    
     // If there's no current song, play this one
     if (!currentSong) {
-      playPauseSong(song);
+      playPauseSong(formattedSong);
     } else {
       // If there is a current song, add this one to queue
-      addToQueue(song);
+      addToQueue(formattedSong);
     }
   };
 
   const handleAddToQueue = (song) => {
-    addToQueue(song);
+    const formattedSong = {
+      id: song.url,
+      title: song.name,
+      artist: song.artist,
+      videoId: song.url,
+      audioUrl: `${API_URL}/audio/${encodeURIComponent(song.url)}`,
+      duration: '0:00', // Default duration since it's not available
+      thumbnail: `https://i1.sndcdn.com/artworks-${song.url.split('/').pop()}-large.jpg`
+    };
+    
+    console.log('Formatted song for queue:', formattedSong);
+    addToQueue(formattedSong);
   };
 
   return (
@@ -151,7 +175,7 @@ const Search = () => {
         </List>
       )}
 
-      {!loading && searchResults.length === 0 && searchQuery && (
+      {!loading && searchResults.length === 0 && (
         <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
           {error || 'No results found'}
         </Typography>
