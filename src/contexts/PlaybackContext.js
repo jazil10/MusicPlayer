@@ -44,7 +44,7 @@ export const PlaybackProvider = ({ children }) => {
         const nextSong = queue[0];
         setQueue(prevQueue => prevQueue.slice(1));
         setCurrentSong(nextSong);
-        const audioUrl = nextSong.audioUrl || `${API_URL}/api/audio/${nextSong.videoId}`;
+        const audioUrl = nextSong.audioUrl || `${API_URL}/audio/${nextSong.videoId}`;
         audio.src = audioUrl;
         audio.play();
       } else {
@@ -70,7 +70,7 @@ export const PlaybackProvider = ({ children }) => {
       console.log('Starting playback for song:', song);
       
       const audio = audioRef.current;
-      const audioUrl = song.audioUrl || `${API_URL}/api/audio/${song.videoId}`;
+      const audioUrl = song.audioUrl || `${API_URL}/audio/${song.videoId}`;
       console.log('Audio URL:', audioUrl);
       
       audio.src = audioUrl;
