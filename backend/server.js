@@ -51,18 +51,17 @@ app.get('/api/audio/:trackId', async (req, res) => {
     console.log(`Fetching track info from: ${trackUrl}`);
 
     const track = await client.getSongInfo(trackUrl);
-    console.log('Track info:', JSON.stringify(track, null, 2));
-
-    // Prepare response headers
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Accept-Ranges', 'bytes');
-
+    
     // The scraper may expose streams under `.streams` or `.track`
     const streams = track.streams || track.track;
     const progURL = streams?.progressive;
     const hlsURL  = streams?.hls;
-
+    
+    // For seeking functionality, we need to properly handle range requests
+    const rangeHeader = req.headers.range;
     let stream;
+    
+    // First, let's determine which download method to use
     if (progURL && progURL.includes('/hls')) {
       console.log('Progressive URL is HLS; falling back to HLS download');
       stream = await track.downloadHLS();
@@ -70,20 +69,58 @@ app.get('/api/audio/:trackId', async (req, res) => {
       console.log('Using progressive download');
       stream = await track.downloadProgressive();
     }
-
-    // Pipe with back-pressure
+    
+    // Set the proper headers for streaming
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Accept-Ranges', 'bytes');
+    
+    // Create an empty buffer to hold the audio data
+    let audioBuffer = Buffer.alloc(0);
+    let totalLength = 0;
+    
+    // Use event-based approach to first collect the entire audio
     stream.on('data', chunk => {
-      if (!res.write(chunk)) {
-        stream.pause();
+      audioBuffer = Buffer.concat([audioBuffer, chunk]);
+      totalLength += chunk.length;
+    });
+    
+    stream.on('end', () => {
+      console.log('Stream data fully loaded, total size:', totalLength);
+      
+      // Now handle range requests if present
+      if (rangeHeader) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : totalLength - 1;
+        
+        // Calculate the chunk length and set content-range header
+        const chunkLength = (end - start) + 1;
+        const headers = {
+          'Content-Range': `bytes ${start}-${end}/${totalLength}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkLength,
+          'Content-Type': 'audio/mpeg',
+        };
+        
+        // Send partial content status
+        res.writeHead(206, headers);
+        
+        // Send the specific range of bytes requested
+        const slicedBuffer = audioBuffer.slice(start, end + 1);
+        res.end(slicedBuffer);
+        
+        console.log(`Served range request: bytes ${start}-${end}/${totalLength}`);
+      } else {
+        // No range header, serve the entire file
+        res.writeHead(200, {
+          'Content-Length': totalLength,
+          'Content-Type': 'audio/mpeg',
+        });
+        res.end(audioBuffer);
+        console.log('Served entire audio file');
       }
     });
-    res.on('drain', () => stream.resume());
-
-    stream.on('end', () => {
-      console.log('Stream ended');
-      res.end();
-    });
-
+    
     stream.on('error', err => {
       console.error('Stream error:', err);
       if (!res.headersSent) {
@@ -93,10 +130,12 @@ app.get('/api/audio/:trackId', async (req, res) => {
         });
       }
     });
-
+    
     req.on('close', () => {
-      console.log('Client disconnected; destroying stream');
-      stream.destroy();
+      if (!res.finished) {
+        console.log('Client disconnected; destroying stream');
+        stream.destroy();
+      }
     });
 
   } catch (err) {
