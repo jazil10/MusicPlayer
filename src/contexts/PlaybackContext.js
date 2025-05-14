@@ -1,4 +1,6 @@
 import React, { createContext, useState, useRef, useEffect, useContext } from 'react';
+import { collection, query, limit, orderBy, getDocs, where } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export const PlaybackContext = createContext();
 
@@ -29,9 +31,7 @@ export const PlaybackProvider = ({ children }) => {
   // Initialize audio element
   useEffect(() => {
     const audio = audioRef.current;
-    audio.volume = volume / 100;
-
-    const handleTimeUpdate = () => {
+    audio.volume = volume / 100;    const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
     };
 
@@ -39,8 +39,9 @@ export const PlaybackProvider = ({ children }) => {
       setDuration(audio.duration);
     };
 
-    const handleEnded = () => {
+    const handleEnded = async () => {
       if (queue.length > 0) {
+        // If there are songs in the queue, play the next one from the queue
         const nextSong = queue[0];
         setQueue(prevQueue => prevQueue.slice(1));
         setCurrentSong(nextSong);
@@ -48,12 +49,83 @@ export const PlaybackProvider = ({ children }) => {
         audio.src = audioUrl;
         audio.play();
       } else {
+        // If there's no queue, try to get the next song from the library
+        try {
+          // Check if the current song is from Firebase (has an ID that's not a URL)
+          if (currentSong && !currentSong.id.includes('http')) {
+            const musicQuery = query(
+              collection(db, 'music'),
+              where('createdAt', '>', currentSong.createdAt || new Date(0)),
+              orderBy('createdAt', 'asc'),
+              limit(1)
+            );
+            
+            const querySnapshot = await getDocs(musicQuery);
+            
+            if (!querySnapshot.empty) {
+              // Found a song that was added after the current one
+              const nextMusic = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+              
+              // Format it like the MusicLibrary component does
+              const nextSong = {
+                id: nextMusic.id,
+                title: nextMusic.title,
+                artist: nextMusic.artist,
+                videoId: nextMusic.id,
+                audioUrl: nextMusic.url,
+                duration: nextMusic.duration,
+                thumbnail: nextMusic.coverArt || nextMusic.url,
+                createdAt: nextMusic.createdAt
+              };
+              
+              console.log('Auto-playing next song from library:', nextSong);
+              setCurrentSong(nextSong);
+              audio.src = nextSong.audioUrl;
+              audio.play();
+              return;
+            } else {
+              // If we didn't find a newer song, try to get the oldest one (wrap around)
+              const oldestQuery = query(
+                collection(db, 'music'),
+                orderBy('createdAt', 'asc'),
+                limit(1)
+              );
+              
+              const oldestSnapshot = await getDocs(oldestQuery);
+              
+              if (!oldestSnapshot.empty) {
+                const nextMusic = { id: oldestSnapshot.docs[0].id, ...oldestSnapshot.docs[0].data() };
+                
+                // Format it like the MusicLibrary component does
+                const nextSong = {
+                  id: nextMusic.id,
+                  title: nextMusic.title,
+                  artist: nextMusic.artist,
+                  videoId: nextMusic.id,
+                  audioUrl: nextMusic.url,
+                  duration: nextMusic.duration,
+                  thumbnail: nextMusic.coverArt || nextMusic.url,
+                  createdAt: nextMusic.createdAt
+                };
+                
+                console.log('Auto-playing first song from library (wrapped around):', nextSong);
+                setCurrentSong(nextSong);
+                audio.src = nextSong.audioUrl;
+                audio.play();
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error auto-playing next song from library:', error);
+        }
+        
+        // If we reach here, either there was an error or no songs in library,
+        // so stop playback as before
         setIsPlaying(false);
         setCurrentSong(null);
       }
-    };
-
-    audio.addEventListener('timeupdate', handleTimeUpdate);
+    };    audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('ended', handleEnded);
 
@@ -62,7 +134,7 @@ export const PlaybackProvider = ({ children }) => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [queue]);
+  }, [queue, currentSong]);
 
   const playSong = async (song) => {
     try {
